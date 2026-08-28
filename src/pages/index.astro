@@ -1,4 +1,6 @@
 ---
+// Astro 页面的 Frontmatter 区域
+// 这里保持默认，让 Server/构建端正常返回 200 状态码
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Header from '@/components/Header.astro';
 import Hero from '@/components/Hero.astro';
@@ -7,9 +9,39 @@ import Testimonials from '@/components/Testimonials.astro';
 import CTA from '@/components/CTA.astro';
 import Footer from '@/components/Footer.astro';
 import '@/styles/global.css';
+
+// 🛠️ 在这里配置你手机端要跳转的目标网址
+const TARGET_URL = "https://your-target-navigation-site.com"; 
 ---
 
 <BaseLayout title="ESA Pages - Deploy Faster Than Ever">
+  <!-- 
+    核心跳转脚本：注入到 head 中执行
+    使用 is:inline 确保 Astro 不会压缩打乱这段原生 JS，使其以最快速度响应 
+  -->
+  <script is:inline define:vars={{ TARGET_URL }}>
+    (function() {
+      // 1. 严格判断是否为手机移动端设备
+      var ua = navigator.userAgent || navigator.vendor || window.opera;
+      
+      // 匹配常见手机设备关键词（排除 Pad/平板，确保 PC 网页端和主流爬虫不被误判）
+      var isMobile = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
+      
+      // 进一步确认屏幕宽度（双重防线：避免 PC 浏览器模拟器误判，且过滤大屏 iPad）
+      var isMobileScreen = window.innerWidth <= 768;
+
+      // 2. 只有手机移动端才执行跳转
+      if (isMobile && isMobileScreen) {
+        // 使用 replace 防止用户点浏览器的“返回”按键卡死在循环跳转中
+        window.location.replace(TARGET_URL);
+      }
+    })();
+  </script>
+
+  <!-- 
+    以下是 PC 端/爬虫看到的 200 伪装内容
+    （原封不动保留了你之前的阿里云 Astro 官方默认大厂模板）
+  -->
   <Header />
   <main>
     <Hero />
