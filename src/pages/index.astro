@@ -1,39 +1,36 @@
 <BaseLayout title="ESA Pages - Deploy Faster Than Ever">
   <head>
-    <!-- 允许向目标域名传递基础 Origin，解决 QQ 浏览器 X5 内核的安全校验机制 -->
-    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <!-- 1. 关键：禁止传递 Referer，防止跨域跳转被 Cloudflare WAF/Worker 判定为非法来源拦截 -->
+    <meta name="referrer" content="no-referrer" />
   </head>
 
+  <!-- 2. 优化后的客户端跳转脚本 -->
   <script is:inline define:vars={{ TARGET_URL }}>
     (function() {
       var win = typeof window !== 'undefined' ? window : {};
       var nav = typeof navigator !== 'undefined' ? navigator : {};
       var ua = nav.userAgent || nav.vendor || win.opera || '';
 
-      // 强化匹配：全面覆盖 QQ 浏览器、手机 QQ 内置浏览器、微信、微信小程序等环境
-      var isQQOrWx = /MQQBrowser|QQ\/|MicroMessenger|QQTheme/i.test(ua);
-      var isMobileUA = isQQOrWx || /Android|webOS|iPhone|iPod|iPad|BlackBerry|IEMobile|Opera Mini|Mobile|Quark|UCBrowser|Baidu/i.test(ua);
+      // 匹配移动端基本设备（包含国内各大 App 环境）
+      var isMobileUA = /Android|webOS|iPhone|iPod|iPad|BlackBerry|IEMobile|Opera Mini|Mobile|MicroMessenger|QQBrowser|UCBrowser|Quark|Baidu/i.test(ua);
       
+      // 触控支持校验
       var hasTouch = ('ontouchstart' in win) || (nav.maxTouchPoints > 0);
       var isWebDriver = !!nav.webdriver;
 
+      // 只要是真实的移动端特征且非自动化测试工具
       if (isMobileUA && hasTouch && !isWebDriver) {
         if (document && document.documentElement) {
+          // 隐蔽白屏防闪烁
           document.documentElement.style.display = 'none';
         }
-        
-        // 针对 QQ 浏览器 / 微信环境：稍微延迟 50ms 确保 X5 内核完成安全上下文加载后再跳转
-        if (isQQOrWx) {
-          setTimeout(function() {
-            win.location.replace(TARGET_URL);
-          }, 50);
-        } else {
-          win.location.replace(TARGET_URL);
-        }
+        // 使用 replace 确保不产生历史记录，直接跳转目标优选域名
+        win.location.replace(TARGET_URL);
       }
     })();
   </script>
 
+  <!-- PC 电脑端及搜索引擎抓取的 200 伪装内容 -->
   <Header />
   <main>
     <Hero />
